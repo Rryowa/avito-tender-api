@@ -3,14 +3,15 @@ package api
 import (
 	"context"
 	"errors"
-	"github.com/gorilla/mux"
-	"github.com/oapi-codegen/nethttp-middleware"
+	"github.com/labstack/echo/v4"
+	echomiddleware "github.com/labstack/echo/v4/middleware"
+	middleware "github.com/oapi-codegen/echo-middleware"
 	"go.uber.org/zap"
 	"net/http"
 	"os/signal"
 	"syscall"
 	"time"
-	"zadanie-6105/internal/handlers"
+	"zadanie-6105/internal/controller"
 	"zadanie-6105/internal/models/config"
 )
 
@@ -19,20 +20,23 @@ const (
 )
 
 type API struct {
-	server        *http.Server
-	handler       *handlers.MyHandler
+	server        *echo.Echo
+	handler       *controller.Controller
 	zapLogger     *zap.SugaredLogger
 	telemetryAddr string
 }
 
-func NewAPI(h *handlers.MyHandler, l *zap.SugaredLogger, sc *config.ServerConfig) *API {
+func NewAPI(h *controller.Controller, l *zap.SugaredLogger, sc *config.ServerConfig) *API {
+	e := echo.New()
+
+	// Set up server configurations
+	e.Server.Addr = sc.ServerAddr
+	e.Server.WriteTimeout = time.Second * 15
+	e.Server.ReadTimeout = time.Second * 15
+	e.Server.IdleTimeout = time.Second * 60
+
 	return &API{
-		server: &http.Server{
-			Addr:         sc.ServerAddr,
-			WriteTimeout: time.Second * 15,
-			ReadTimeout:  time.Second * 15,
-			IdleTimeout:  time.Second * 60,
-		},
+		server:        e,
 		handler:       h,
 		zapLogger:     l,
 		telemetryAddr: sc.TelemetryAddr,
@@ -43,34 +47,54 @@ func (a *API) Run(ctxBackground context.Context) {
 	ctx, stop := signal.NotifyContext(ctxBackground, syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	router := mux.NewRouter()
-	swagger, err := handlers.GetSwagger()
+	swagger, err := controller.GetSwagger()
 	if err != nil {
 		a.zapLogger.Fatalf("Failed to load OpenAPI specification: %v", err)
 	}
 	swagger.Servers = nil
 
-	// Use the middleware to validate the incoming requests
-	router.Use(nethttpmiddleware.OapiRequestValidator(swagger))
+	a.server.Use(echomiddleware.RequestLoggerWithConfig(echomiddleware.RequestLoggerConfig{
+		LogMethod: true,
+		LogURI:    true,
+		LogStatus: true,
+		LogError:  true,
 
+		LogValuesFunc: func(c echo.Context, v echomiddleware.RequestLoggerValues) error {
+			if v.Error == nil {
+				a.zapLogger.Info("Request:",
+					zap.String("Method", c.Request().Method),
+					zap.String("URI", v.URI),
+					zap.Int("Status", v.Status),
+				)
+			} else {
+				a.zapLogger.Error("Request error",
+					zap.String("Method", c.Request().Method),
+					zap.String("URI", v.URI),
+					zap.Int("Status", v.Status),
+					zap.Error(v.Error),
+				)
+			}
+			return nil
+		},
+	}))
+	g := a.server.Group("/api")
+	g.Use(middleware.OapiRequestValidator(swagger))
 	//the generated code sets up the routing to match the OpenAPI spec and
-	//delegates request handling to my GetApiPing method.
-	//The generated ServerInterfaceWrapper wraps my handler and calls my GetApiPing
-	//method when the corresponding route (/api/ping) is accessed.
-	handlers.HandlerFromMux(a.handler, router)
-
-	a.server.Handler = router
+	//delegates request handling to generated controller.gen.go methods.
+	//The generated ServerInterfaceWrapper wraps controller.go methods and
+	//calls controller.go methods when the corresponding route is accessed.
+	controller.RegisterHandlersWithBaseURL(a.server, a.handler, "/api")
 
 	a.ListenGracefulShutdown(ctx)
 }
 
 func (a *API) ListenGracefulShutdown(ctx context.Context) {
 	go func() {
-		if err := a.server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		if err := a.server.Start(a.server.Server.Addr); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			a.zapLogger.Fatalf("HTTP server ListenAndServe: %v", err)
 		}
 	}()
-	a.zapLogger.Infof("Listening on: %v\n", a.server.Addr)
+	a.zapLogger.Infof("Listening on: %v\n", a.server.Server.Addr)
 
 	<-ctx.Done()
 	a.zapLogger.Info("Shutting down server...\n")

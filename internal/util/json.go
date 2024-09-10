@@ -66,18 +66,3 @@ func DecodeJSONBody(r *http.Request, dst interface{}) error {
 
 	return nil
 }
-
-func WriteJSON(w http.ResponseWriter, v any) {
-	w.Header().Set("Content-Type", "aplication/json")
-	b, err := json.Marshal(v)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	_, err = w.Write(b)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}

@@ -1,6 +1,0 @@
-package: handlers
-output: handlers.gen.go
-generate:
-  models: true
-  gorilla-server: true
-  embedded-spec: true
