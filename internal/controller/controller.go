@@ -14,12 +14,14 @@ import (
 type Controller struct {
 	zapLogger     *zap.SugaredLogger
 	tenderService *service.TenderService
+	bidService    *service.BidService
 }
 
-func NewController(l *zap.SugaredLogger, ts *service.TenderService) *Controller {
+func NewController(l *zap.SugaredLogger, ts *service.TenderService, bs *service.BidService) *Controller {
 	return &Controller{
 		zapLogger:     l,
 		tenderService: ts,
+		bidService:    bs,
 	}
 }
 
@@ -154,52 +156,162 @@ func (c *Controller) RollbackTender(ctx echo.Context, tenderId TenderId, version
 	return nil
 }
 
-func (c *Controller) GetUserBids(ctx echo.Context, params GetUserBidsParams) error {
-	//TODO implement me
-	panic("implement me")
-}
-
 func (c *Controller) CreateBid(ctx echo.Context) error {
-	//TODO implement me
-	panic("implement me")
+	var bid models.Bid
+
+	if err := util.DecodeJSONBody(ctx.Request(), &bid); err != nil {
+		c.zapLogger.Error(err)
+		var mr *util.MalformedRequest
+		if errors.As(err, &mr) {
+			ctx.JSON(mr.Status, ErrorResponse{Reason: mr.Msg})
+			return err
+		}
+		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Reason: err.Error()})
+		return err
+	}
+
+	newBid, err := c.bidService.CreateBid(ctx.Request(), &bid)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, newBid)
+	return nil
 }
 
-func (c *Controller) EditBid(ctx echo.Context, bidId BidId, params EditBidParams) error {
-	//TODO implement me
-	panic("implement me")
-}
+func (c *Controller) GetUserBids(ctx echo.Context, params GetUserBidsParams) error {
+	var offset, limit int32 = 0, 5
+	if params.Offset != nil {
+		offset = *params.Offset
+	}
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
 
-func (c *Controller) SubmitBidFeedback(ctx echo.Context, bidId BidId, params SubmitBidFeedbackParams) error {
-	//TODO implement me
-	panic("implement me")
-}
+	bids, err := c.bidService.GetUserBids(ctx.Request(), offset, limit, *params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
 
-func (c *Controller) RollbackBid(ctx echo.Context, bidId BidId, version int32, params RollbackBidParams) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Controller) GetBidStatus(ctx echo.Context, bidId BidId, params GetBidStatusParams) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Controller) UpdateBidStatus(ctx echo.Context, bidId BidId, params UpdateBidStatusParams) error {
-	//TODO implement me
-	panic("implement me")
-}
-
-func (c *Controller) SubmitBidDecision(ctx echo.Context, bidId BidId, params SubmitBidDecisionParams) error {
-	//TODO implement me
-	panic("implement me")
+	ctx.JSON(http.StatusOK, bids)
+	return nil
 }
 
 func (c *Controller) GetBidsForTender(ctx echo.Context, tenderId TenderId, params GetBidsForTenderParams) error {
-	//TODO implement me
-	panic("implement me")
+	var offset, limit int32 = 0, 5
+	if params.Offset != nil {
+		offset = *params.Offset
+	}
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	bids, err := c.bidService.GetBidsForTender(ctx.Request(), tenderId, offset, limit, params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, bids)
+	return nil
+}
+
+func (c *Controller) GetBidStatus(ctx echo.Context, bidId BidId, params GetBidStatusParams) error {
+	bids, err := c.bidService.GetBidStatus(ctx.Request(), bidId, params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, bids)
+	return nil
+}
+
+func (c *Controller) UpdateBidStatus(ctx echo.Context, bidId BidId, params UpdateBidStatusParams) error {
+	status, err := c.bidService.UpdateBidStatus(ctx.Request(), bidId, string(params.Status), params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, status)
+	return nil
+}
+
+func (c *Controller) EditBid(ctx echo.Context, bidId BidId, params EditBidParams) error {
+	var bid models.Bid
+	if err := util.DecodeJSONBody(ctx.Request(), &bid); err != nil {
+		c.zapLogger.Error(err)
+		var mr *util.MalformedRequest
+		if errors.As(err, &mr) {
+			ctx.JSON(mr.Status, ErrorResponse{Reason: mr.Msg})
+			return err
+		}
+		ctx.JSON(http.StatusInternalServerError, ErrorResponse{Reason: err.Error()})
+		return err
+	}
+
+	newBid, err := c.bidService.EditBid(ctx.Request(), &bid, bidId, params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, newBid)
+	return nil
+}
+
+func (c *Controller) SubmitBidDecision(ctx echo.Context, bidId BidId, params SubmitBidDecisionParams) error {
+	status, err := c.bidService.SubmitBidDecision(ctx.Request(), bidId, string(params.Decision), params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, status)
+	return nil
+}
+
+func (c *Controller) SubmitBidFeedback(ctx echo.Context, bidId BidId, params SubmitBidFeedbackParams) error {
+	status, err := c.bidService.SubmitBidFeedback(ctx.Request(), bidId, params.BidFeedback, params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, status)
+	return nil
 }
 
 func (c *Controller) GetBidReviews(ctx echo.Context, tenderId TenderId, params GetBidReviewsParams) error {
-	//TODO implement me
-	panic("implement me")
+	var offset, limit int32 = 0, 5
+	if params.Offset != nil {
+		offset = *params.Offset
+	}
+	if params.Limit != nil {
+		limit = *params.Limit
+	}
+
+	reviews, err := c.bidService.GetBidReviews(ctx.Request(), tenderId, params.AuthorUsername, params.RequesterUsername, offset, limit)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, reviews)
+	return nil
+}
+
+func (c *Controller) RollbackBid(ctx echo.Context, bidId BidId, version int32, params RollbackBidParams) error {
+	reviews, err := c.bidService.RollbackBid(ctx.Request(), bidId, version, params.Username)
+	if err != nil {
+		return HandleError(ctx, err)
+	}
+
+	ctx.JSON(http.StatusOK, reviews)
+	return nil
+}
+
+func HandleError(ctx echo.Context, err error) error {
+	var customErr util.MyErrorResponse
+	if errors.As(err, &customErr) {
+		ctx.JSON(customErr.Status, ErrorResponse{Reason: customErr.Msg})
+		return err
+	}
+
+	ctx.JSON(http.StatusInternalServerError, ErrorResponse{Reason: err.Error()})
+	return err
 }

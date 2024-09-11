@@ -9,13 +9,16 @@ import (
 	"zadanie-6105/internal/util"
 )
 
-// eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJPbmxpbmUgSldUIEJ1aWxkZXIiLCJpYXQiOjE3MjU5MDA3NzAsImV4cCI6MTc1NzQzNjc3MCwiYXVkIjoid3d3LmV4YW1wbGUuY29tIiwic3ViIjoianJvY2tldEBleGFtcGxlLmNvbSIsIkdpdmVuTmFtZSI6IkpvaG5ueSIsIlN1cm5hbWUiOiJSb2NrZXQiLCJFbWFpbCI6Impyb2NrZXRAZXhhbXBsZS5jb20iLCJSb2xlIjpbIk1hbmFnZXIiLCJQcm9qZWN0IEFkbWluaXN0cmF0b3IiXX0.KWq8eGJpcbZt0l5k2VGXvG59VseYzIRVqkg5I6RR5Uc
+// TODO: Решение должно быть загружено в репозиторий в ветку main.
+// Необходимо клонировать репозиторий к себе, выполнить задание и
+// запушить его обратно.
 func main() {
 	ctx := context.Background()
 	zapLogger := util.NewZapLogger()
 	storage := postgres.NewPostgresRepository(ctx, util.NewDbConfig(), zapLogger)
 	tenderService := service.NewTenderService(storage)
-	ctrl := controller.NewController(zapLogger, tenderService)
+	bidService := service.NewBidService(storage)
+	ctrl := controller.NewController(zapLogger, tenderService, bidService)
 
 	app := api.NewAPI(ctrl, zapLogger, util.NewServerConfig())
 
