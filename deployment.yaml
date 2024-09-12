@@ -1,31 +1,32 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: zadanie-6105
+  name: myapp-deployment
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
-      app: zadanie-6105
+      app: myapp
   template:
     metadata:
       labels:
-        app: zadanie-6105
+        app: myapp
     spec:
       containers:
-        - name: zadanie-6105
-          image: zadanie-6105:latest
+        - name: myapp-container
+          image: rryowa/zadanie-6105:latest
           ports:
             - containerPort: 8080
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: zadanie-6105-service
+  name: myapp-service
 spec:
   type: LoadBalancer
-  ports:
-    - port: 80
-      targetPort: 8080
   selector:
-    app: zadanie-6105
+    app: myapp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080
