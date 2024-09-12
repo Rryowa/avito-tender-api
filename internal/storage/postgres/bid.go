@@ -14,7 +14,7 @@ func (d *Database) CreateBid(ctx context.Context, bid *models.Bid) (models.Bid, 
 				VALUES ($1,	$2, $3, $4, $5)
 				RETURNING id, name, description, status, tender_id, author_type, author_id, version, created_at;`
 
-	rows, err := d.Pool.Query(ctx, query, bid.Name, bid.Description, bid.TenderId, bid.AuthorType, bid.AuthorID)
+	rows, err := d.Pool.Query(ctx, query, bid.Name, bid.Description, bid.TenderID, bid.AuthorType, bid.AuthorID)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -48,14 +48,14 @@ func (d *Database) GetUserBids(ctx context.Context, offset, limit int32, usernam
 
 	const op2 = op + "pgxscan"
 	var bids []models.Bid
-	if err := pgxscan.ScanAll(&bids, rows); err != nil {
+	if err = pgxscan.ScanAll(&bids, rows); err != nil {
 		return nil, fmt.Errorf("%s: %w", op2, err)
 	}
 
 	return bids, err
 }
 
-func (d *Database) GetBidsForTender(ctx context.Context, tenderId string, offset, limit int32) ([]models.Bid, error) {
+func (d *Database) GetBidsForTender(ctx context.Context, tenderID string, offset, limit int32) ([]models.Bid, error) {
 	const op = "storage.GetBidsForTender"
 
 	query := `SELECT b.id, b.name, b.description, b.tender_id, b.status, b.decision, b.author_type, b.author_id, b.version, b.created_at, b.updated_at
@@ -66,7 +66,7 @@ func (d *Database) GetBidsForTender(ctx context.Context, tenderId string, offset
 				OFFSET $2
 				FETCH NEXT $3 ROWS ONLY;`
 
-	rows, err := d.Pool.Query(ctx, query, tenderId, offset, limit)
+	rows, err := d.Pool.Query(ctx, query, tenderID, offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -74,14 +74,14 @@ func (d *Database) GetBidsForTender(ctx context.Context, tenderId string, offset
 
 	const op2 = op + "pgxscan"
 	var bids []models.Bid
-	if err := pgxscan.ScanAll(&bids, rows); err != nil {
+	if err = pgxscan.ScanAll(&bids, rows); err != nil {
 		return nil, fmt.Errorf("%s: %w", op2, err)
 	}
 
 	return bids, err
 }
 
-func (d *Database) GetBidStatus(ctx context.Context, bidId, username string) (string, error) {
+func (d *Database) GetBidStatus(ctx context.Context, bidID, username string) (string, error) {
 	const op = "storage.GetBidStatus"
 
 	query := `SELECT b.status
@@ -89,7 +89,7 @@ func (d *Database) GetBidStatus(ctx context.Context, bidId, username string) (st
 				JOIN employee e ON (b.author_id = e.id)
 				WHERE b.id = $1 AND e.username = $2;`
 
-	rows, err := d.Pool.Query(ctx, query, bidId, username)
+	rows, err := d.Pool.Query(ctx, query, bidID, username)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
@@ -97,14 +97,14 @@ func (d *Database) GetBidStatus(ctx context.Context, bidId, username string) (st
 
 	const op2 = op + "pgxscan"
 	var status string
-	if err := pgxscan.ScanOne(&status, rows); err != nil {
+	if err = pgxscan.ScanOne(&status, rows); err != nil {
 		return "", fmt.Errorf("%s: %w", op2, err)
 	}
 
 	return status, err
 }
 
-func (d *Database) UpdateBidStatus(ctx context.Context, bidId, status, username string) (models.Bid, error) {
+func (d *Database) UpdateBidStatus(ctx context.Context, bidID, status, username string) (models.Bid, error) {
 	const op = "storage.UpdateBidStatus"
 
 	query := `UPDATE bid b
@@ -113,7 +113,7 @@ func (d *Database) UpdateBidStatus(ctx context.Context, bidId, status, username 
 				WHERE b.author_id = e.id AND b.id = $2 AND e.username = $3
 				RETURNING b.id, b.name, b.description, b.tender_id, b.status, b.decision, b.author_type, b.author_id, b.version, b.created_at, b.updated_at;`
 
-	rows, err := d.Pool.Query(ctx, query, status, bidId, username)
+	rows, err := d.Pool.Query(ctx, query, status, bidID, username)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -128,7 +128,7 @@ func (d *Database) UpdateBidStatus(ctx context.Context, bidId, status, username 
 	return updatedBid, nil
 }
 
-func (d *Database) EditBid(ctx context.Context, bid *models.Bid, bidId, username string) (models.Bid, error) {
+func (d *Database) EditBid(ctx context.Context, bid *models.Bid, bidID, username string) (models.Bid, error) {
 	const op = "storage.EditBid"
 
 	query := `UPDATE bid b
@@ -139,7 +139,7 @@ func (d *Database) EditBid(ctx context.Context, bid *models.Bid, bidId, username
 				WHERE b.author_id = e.id AND b.id = $3 AND e.username = $4
 				RETURNING b.id, b.name, b.description, b.tender_id, b.status, b.decision, b.author_type, b.author_id, b.version, b.created_at, b.updated_at;`
 
-	rows, err := d.Pool.Query(ctx, query, bid.Name, bid.Description, bidId, username)
+	rows, err := d.Pool.Query(ctx, query, bid.Name, bid.Description, bidID, username)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -154,7 +154,7 @@ func (d *Database) EditBid(ctx context.Context, bid *models.Bid, bidId, username
 	return newBid, nil
 }
 
-func (d *Database) SubmitBidDecision(ctx context.Context, bidId, decision, username string) (models.Bid, error) {
+func (d *Database) SubmitBidDecision(ctx context.Context, bidID, decision, username string) (models.Bid, error) {
 	const op = "storage.SubmitBidDecision"
 
 	query := `UPDATE bid b
@@ -163,7 +163,7 @@ func (d *Database) SubmitBidDecision(ctx context.Context, bidId, decision, usern
 				WHERE b.author_id = e.id AND b.id = $2 AND e.username = $3
 				RETURNING b.id, b.name, b.description, b.tender_id, b.status, b.decision, b.author_type, b.author_id, b.version, b.created_at, b.updated_at;`
 
-	rows, err := d.Pool.Query(ctx, query, decision, bidId, username)
+	rows, err := d.Pool.Query(ctx, query, decision, bidID, username)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -178,12 +178,12 @@ func (d *Database) SubmitBidDecision(ctx context.Context, bidId, decision, usern
 	return updatedBid, nil
 }
 
-func (d *Database) SubmitBidFeedback(ctx context.Context, bidId, bidFeedback, username string) (models.Bid, error) {
+func (d *Database) SubmitBidFeedback(ctx context.Context, bidID, bidFeedback, username string) (models.Bid, error) {
 	const op = "storage.SubmitBidFeedback"
 
 	insertQuery := `INSERT INTO review (bid_id, author_username, description)
 				VALUES ($1,	$2, $3);`
-	_, err := d.Pool.Exec(ctx, insertQuery, bidId, username, bidFeedback)
+	_, err := d.Pool.Exec(ctx, insertQuery, bidID, username, bidFeedback)
 	if err != nil {
 		return models.Bid{}, err
 	}
@@ -192,7 +192,7 @@ func (d *Database) SubmitBidFeedback(ctx context.Context, bidId, bidFeedback, us
 				FROM bid
 				WHERE id = $1;`
 
-	rows, err := d.Pool.Query(ctx, query, bidId)
+	rows, err := d.Pool.Query(ctx, query, bidID)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -228,16 +228,14 @@ func (d *Database) GetBidReviews(ctx context.Context, authorUsername string, off
 		return nil, fmt.Errorf("%s: %w", op2, err)
 	}
 
-	fmt.Println(reviews)
-
 	return reviews, nil
 }
 
-func (d *Database) RollbackBid(ctx context.Context, bidId string, version int32, username string) (models.Bid, error) {
+func (d *Database) RollbackBid(ctx context.Context, bidID string, version int32, username string) (models.Bid, error) {
 	const op = "storage.RollbackBid"
 
 	query := `SELECT * FROM rollback_bid_version($1::UUID, $2::INT, $3::VARCHAR)`
-	rows, err := d.Pool.Query(ctx, query, bidId, version, username)
+	rows, err := d.Pool.Query(ctx, query, bidID, version, username)
 	if err != nil {
 		return models.Bid{}, fmt.Errorf("%s: %w", op, err)
 	}

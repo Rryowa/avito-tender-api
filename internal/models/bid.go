@@ -22,7 +22,7 @@ type Bid struct {
 	Description    string        `db:"description" json:"description"`
 	Feedback       *string       `db:"feedback" json:"feedback,omitempty"`
 	Status         BidStatus     `db:"status" json:"status"`
-	TenderId       uuid.UUID     `db:"tender_id" json:"tenderId"`
+	TenderID       uuid.UUID     `db:"tender_id" json:"tenderId"`
 	OrganizationID uuid.NullUUID `db:"organization_id" json:"organizationId,omitempty"`
 	Decision       BidDecision   `db:"decision" json:"decision,omitempty"`
 	AuthorID       uuid.UUID     `db:"author_id" json:"authorId"`
@@ -40,7 +40,7 @@ type BidHistory struct {
 	Description    string        `db:"description"`
 	Feedback       *string       `db:"feedback"`
 	Status         BidStatus     `db:"status"`
-	TenderId       uuid.UUID     `db:"tender_id"`
+	TenderID       uuid.UUID     `db:"tender_id"`
 	OrganizationID uuid.NullUUID `db:"organization_id"`
 	Decision       BidDecision   `db:"decision"`
 	AuthorID       uuid.UUID     `db:"author_id"`

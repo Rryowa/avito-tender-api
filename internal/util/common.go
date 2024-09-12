@@ -19,13 +19,34 @@ func init() {
 }
 
 func NewServerConfig() *config.ServerConfig {
+	writeTimeout, err := time.ParseDuration(os.Getenv("WRITE_TIMEOUT"))
+	if err != nil {
+		log.Fatalf("Error parsing WRITE_TIMEOUT: %v\n", err)
+	}
+	readTimeout, err := time.ParseDuration(os.Getenv("READ_TIMEOUT"))
+	if err != nil {
+		log.Fatalf("Error parsing READ_TIMEOUT: %v\n", err)
+	}
+	idleTimeout, err := time.ParseDuration(os.Getenv("IDLE_TIMEOUT"))
+	if err != nil {
+		log.Fatalf("Error parsing IDLE_TIMEOUT: %v\n", err)
+	}
+	gracefulTimeout, err := time.ParseDuration(os.Getenv("GRACEFUL_TIMEOUT"))
+	if err != nil {
+		log.Fatalf("Error parsing GRACEFUL_TIMEOUT: %v\n", err)
+	}
+
 	return &config.ServerConfig{
-		ServerAddr:    os.Getenv("SERVER_ADDRESS"),
-		TelemetryAddr: os.Getenv("TELEMETRY_ADDRESS"),
+		ServerAddr:      os.Getenv("SERVER_ADDRESS"),
+		TelemetryAddr:   os.Getenv("TELEMETRY_ADDRESS"),
+		WriteTimeout:    writeTimeout,
+		ReadTimeout:     readTimeout,
+		IdleTimeout:     idleTimeout,
+		GracefulTimeout: gracefulTimeout,
 	}
 }
 
-func NewDbConfig() *config.DbConfig {
+func NewDBConfig() *config.DBConfig {
 	attempts, err := strconv.Atoi(os.Getenv("ATTEMPTS"))
 	if err != nil {
 		log.Fatalf("err converting ATTEMPTS: %v\n", err)
@@ -35,7 +56,7 @@ func NewDbConfig() *config.DbConfig {
 		log.Fatalf("Error parsing TIMEOUT: %v\n", err)
 	}
 
-	return &config.DbConfig{
+	return &config.DBConfig{
 		User:     os.Getenv("POSTGRES_USERNAME"),
 		Password: os.Getenv("POSTGRES_PASSWORD"),
 		Host:     os.Getenv("POSTGRES_HOST"),
@@ -62,7 +83,10 @@ func NewZapLogger() *zap.SugaredLogger {
 	)
 	logger := zap.New(core, zap.AddStacktrace(zap.ErrorLevel))
 	sugar := logger.Sugar()
-	sugar.Sync()
+	if err := sugar.Sync(); err != nil {
+		return nil
+	}
+
 	return sugar
 }
 

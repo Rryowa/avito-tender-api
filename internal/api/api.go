@@ -20,26 +20,27 @@ const (
 )
 
 type API struct {
-	server        *echo.Echo
-	handler       *controller.Controller
-	zapLogger     *zap.SugaredLogger
-	telemetryAddr string
+	server          *echo.Echo
+	controller      *controller.Controller
+	zapLogger       *zap.SugaredLogger
+	telemetryAddr   string
+	gracefulTimeout time.Duration
 }
 
-func NewAPI(h *controller.Controller, l *zap.SugaredLogger, sc *config.ServerConfig) *API {
+func NewAPI(c *controller.Controller, l *zap.SugaredLogger, sc *config.ServerConfig) *API {
 	e := echo.New()
 
-	// Set up server configurations
 	e.Server.Addr = sc.ServerAddr
-	e.Server.WriteTimeout = time.Second * 15
-	e.Server.ReadTimeout = time.Second * 15
-	e.Server.IdleTimeout = time.Second * 60
+	e.Server.WriteTimeout = sc.WriteTimeout
+	e.Server.ReadTimeout = sc.ReadTimeout
+	e.Server.IdleTimeout = sc.IdleTimeout
 
 	return &API{
-		server:        e,
-		handler:       h,
-		zapLogger:     l,
-		telemetryAddr: sc.TelemetryAddr,
+		server:          e,
+		controller:      c,
+		zapLogger:       l,
+		gracefulTimeout: sc.GracefulTimeout,
+		telemetryAddr:   sc.TelemetryAddr,
 	}
 }
 
@@ -79,11 +80,11 @@ func (a *API) Run(ctxBackground context.Context) {
 	}))
 	g := a.server.Group("/api")
 	g.Use(middleware.OapiRequestValidator(swagger))
-	//the generated code sets up the routing to match the OpenAPI spec and
-	//delegates request handling to generated controller.gen.go methods.
-	//The generated ServerInterfaceWrapper wraps controller.go methods and
-	//calls controller.go methods when the corresponding route is accessed.
-	controller.RegisterHandlersWithBaseURL(a.server, a.handler, "/api")
+	// the generated code sets up the routing to match the OpenAPI spec and
+	// delegates request handling to generated controller.gen.go methods.
+	// The generated ServerInterfaceWrapper wraps controller.go methods and
+	// calls controller.go methods when the corresponding route is accessed.
+	controller.RegisterHandlersWithBaseURL(a.server, a.controller, "/api")
 
 	a.ListenGracefulShutdown(ctx)
 }
@@ -109,7 +110,7 @@ func (a *API) ListenGracefulShutdown(ctx context.Context) {
 	longShutdown := make(chan struct{}, 1)
 
 	go func() {
-		time.Sleep(3 * time.Second)
+		time.Sleep(a.gracefulTimeout)
 		longShutdown <- struct{}{}
 	}()
 

@@ -2,11 +2,9 @@ package service
 
 import (
 	"errors"
-	"github.com/jackc/pgx/v5"
 	"net/http"
 	"zadanie-6105/internal/models"
 	"zadanie-6105/internal/storage"
-	"zadanie-6105/internal/util"
 )
 
 type BidService struct {
@@ -23,27 +21,18 @@ func (bs *BidService) CreateBid(r *http.Request, bid *models.Bid) (models.Bid, e
 	}
 
 	var emptyBid models.Bid
-	err := bs.storage.IsTenderExists(r.Context(), bid.TenderId.String())
+	err := bs.storage.CheckTenderExists(r.Context(), bid.TenderID.String())
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserByIdExists(r.Context(), bid.AuthorID.String())
+	err = bs.storage.CheckUserByIDExists(r.Context(), bid.AuthorID.String())
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesUserId(r.Context(), bid.AuthorID.String(), bid.TenderId.String())
+	err = bs.storage.ValidateUsersPrivilegesUserID(r.Context(), bid.AuthorID.String(), bid.TenderID.String())
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden + err.Error()}
-		}
 		return emptyBid, err
 	}
 
@@ -51,250 +40,172 @@ func (bs *BidService) CreateBid(r *http.Request, bid *models.Bid) (models.Bid, e
 }
 
 func (bs *BidService) GetUserBids(r *http.Request, offset, limit int32, username string) ([]models.Bid, error) {
-	err := bs.storage.IsUserExists(r.Context(), username)
+	err := bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return nil, err
 	}
 
 	return bs.storage.GetUserBids(r.Context(), offset, limit, username)
 }
 
-func (bs *BidService) GetBidsForTender(r *http.Request, tenderId string, offset, limit int32, username string) ([]models.Bid, error) {
-	err := bs.storage.IsTenderExists(r.Context(), tenderId)
+func (bs *BidService) GetBidsForTender(r *http.Request, tenderID string, offset, limit int32, username string) ([]models.Bid, error) {
+	err := bs.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return nil, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return nil, err
 	}
 
-	err = bs.storage.ValidateUsersPrivileges(r.Context(), tenderId, username)
+	err = bs.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return nil, err
 	}
 
-	return bs.storage.GetBidsForTender(r.Context(), tenderId, offset, limit)
+	return bs.storage.GetBidsForTender(r.Context(), tenderID, offset, limit)
 }
 
-func (bs *BidService) GetBidStatus(r *http.Request, bidId, username string) (string, error) {
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+func (bs *BidService) GetBidStatus(r *http.Request, bidID, username string) (string, error) {
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return "", err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return "", err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return "", err
 	}
 
-	return bs.storage.GetBidStatus(r.Context(), bidId, username)
+	return bs.storage.GetBidStatus(r.Context(), bidID, username)
 }
 
-func (bs *BidService) UpdateBidStatus(r *http.Request, bidId, status, username string) (models.Bid, error) {
+func (bs *BidService) UpdateBidStatus(r *http.Request, bidID, status, username string) (models.Bid, error) {
 	var emptyBid models.Bid
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyBid, err
 	}
 
-	return bs.storage.UpdateBidStatus(r.Context(), bidId, status, username)
+	return bs.storage.UpdateBidStatus(r.Context(), bidID, status, username)
 }
 
-func (bs *BidService) EditBid(r *http.Request, bid *models.Bid, bidId, username string) (models.Bid, error) {
+func (bs *BidService) EditBid(r *http.Request, bid *models.Bid, bidID, username string) (models.Bid, error) {
 	var emptyBid models.Bid
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyBid, err
 	}
 
-	return bs.storage.EditBid(r.Context(), bid, bidId, username)
+	return bs.storage.EditBid(r.Context(), bid, bidID, username)
 }
 
-func (bs *BidService) SubmitBidDecision(r *http.Request, bidId, decision, username string) (models.Bid, error) {
+func (bs *BidService) SubmitBidDecision(r *http.Request, bidID, decision, username string) (models.Bid, error) {
 	var emptyBid models.Bid
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyBid, err
 	}
 
-	return bs.storage.SubmitBidDecision(r.Context(), bidId, decision, username)
+	return bs.storage.SubmitBidDecision(r.Context(), bidID, decision, username)
 }
 
-func (bs *BidService) SubmitBidFeedback(r *http.Request, bidId, bidFeedback, username string) (models.Bid, error) {
+func (bs *BidService) SubmitBidFeedback(r *http.Request, bidID, bidFeedback, username string) (models.Bid, error) {
 	var emptyBid models.Bid
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyBid, err
 	}
 
-	return bs.storage.SubmitBidFeedback(r.Context(), bidId, bidFeedback, username)
+	return bs.storage.SubmitBidFeedback(r.Context(), bidID, bidFeedback, username)
 }
 
-func (bs *BidService) GetBidReviews(r *http.Request, tenderId, authorUsername, requesterUsername string, offset, limit int32) ([]models.Review, error) {
-	err := bs.storage.IsTenderExists(r.Context(), tenderId)
+func (bs *BidService) GetBidReviews(r *http.Request, tenderID, authorUsername, requesterUsername string, offset, limit int32) ([]models.Review, error) {
+	err := bs.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return nil, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), requesterUsername)
+	err = bs.storage.CheckUserExists(r.Context(), requesterUsername)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return nil, err
 	}
 
-	err = bs.storage.ValidateUsersPrivileges(r.Context(), tenderId, requesterUsername)
+	err = bs.storage.ValidateUsersPrivileges(r.Context(), tenderID, requesterUsername)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return nil, err
 	}
 
 	return bs.storage.GetBidReviews(r.Context(), authorUsername, offset, limit)
 }
 
-func (bs *BidService) RollbackBid(r *http.Request, bidId string, version int32, username string) (models.Bid, error) {
+func (bs *BidService) RollbackBid(r *http.Request, bidID string, version int32, username string) (models.Bid, error) {
 	var emptyBid models.Bid
-	err := bs.storage.IsBidExists(r.Context(), bidId)
+	err := bs.storage.CheckBidExists(r.Context(), bidID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsUserExists(r.Context(), username)
+	err = bs.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.ValidateUsersPrivilegesBidId(r.Context(), bidId, username)
+	err = bs.storage.ValidateUsersPrivilegesBidID(r.Context(), bidID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyBid, err
 	}
 
-	err = bs.storage.IsBidVersionExists(r.Context(), bidId, version)
+	err = bs.storage.CheckBidVersionExists(r.Context(), bidID, version)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyBid, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.VersionNotFound}
-		}
 		return emptyBid, err
 	}
 
-	return bs.storage.RollbackBid(r.Context(), bidId, version, username)
+	return bs.storage.RollbackBid(r.Context(), bidID, version, username)
 }

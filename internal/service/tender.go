@@ -1,12 +1,9 @@
 package service
 
 import (
-	"errors"
-	"github.com/jackc/pgx/v5"
 	"net/http"
 	"zadanie-6105/internal/models"
 	"zadanie-6105/internal/storage"
-	"zadanie-6105/internal/util"
 )
 
 type TenderService struct {
@@ -19,19 +16,11 @@ func NewTenderService(s storage.Storage) *TenderService {
 
 func (ts *TenderService) CreateTender(r *http.Request, tender *models.Tender) (models.Tender, error) {
 	var emptyTender models.Tender
-	err := ts.storage.IsUserExists(r.Context(), tender.CreatorUsername)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
+	if err := ts.storage.CheckUserExists(r.Context(), tender.CreatorUsername); err != nil {
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivilegesOrgId(r.Context(), tender.OrganizationID.String(), tender.CreatorUsername)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
+	if err := ts.storage.ValidateUsersPrivilegesOrgID(r.Context(), tender.OrganizationID.String(), tender.CreatorUsername); err != nil {
 		return emptyTender, err
 	}
 
@@ -43,136 +32,94 @@ func (ts *TenderService) GetTenders(r *http.Request, offset, limit int32, servic
 }
 
 func (ts *TenderService) GetUserTenders(r *http.Request, offset, limit int32, username string) ([]models.Tender, error) {
-	err := ts.storage.IsUserExists(r.Context(), username)
+	err := ts.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return nil, err
 	}
 
 	return ts.storage.GetUserTenders(r.Context(), offset, limit, username)
 }
 
-func (ts *TenderService) GetTenderStatus(r *http.Request, tenderId, username string) (string, error) {
-	err := ts.storage.IsTenderExists(r.Context(), tenderId)
+func (ts *TenderService) GetTenderStatus(r *http.Request, tenderID, username string) (string, error) {
+	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return "", err
 	}
 
-	err = ts.storage.IsUserExists(r.Context(), username)
+	err = ts.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return "", err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderId, username)
+	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return "", util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return "", err
 	}
 
-	return ts.storage.GetTenderStatus(r.Context(), tenderId, username)
+	return ts.storage.GetTenderStatus(r.Context(), tenderID, username)
 }
 
-func (ts *TenderService) UpdateTenderStatus(r *http.Request, tenderId, status, username string) (models.Tender, error) {
+func (ts *TenderService) UpdateTenderStatus(r *http.Request, tenderID, status, username string) (models.Tender, error) {
 	var emptyTender models.Tender
-	err := ts.storage.IsTenderExists(r.Context(), tenderId)
+	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.IsUserExists(r.Context(), username)
+	err = ts.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderId, username)
+	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyTender, err
 	}
 
-	return ts.storage.UpdateTenderStatus(r.Context(), tenderId, status, username)
+	return ts.storage.UpdateTenderStatus(r.Context(), tenderID, status, username)
 }
 
-func (ts *TenderService) EditTender(r *http.Request, tender *models.Tender, tenderId, username string) (models.Tender, error) {
+func (ts *TenderService) EditTender(r *http.Request, tender *models.Tender, tenderID, username string) (models.Tender, error) {
 	var emptyTender models.Tender
-	err := ts.storage.IsTenderExists(r.Context(), tenderId)
+	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.NotFound}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.IsUserExists(r.Context(), username)
+	err = ts.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderId, username)
+	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyTender, err
 	}
 
-	return ts.storage.EditTender(r.Context(), tender, tenderId, username)
+	return ts.storage.EditTender(r.Context(), tender, tenderID, username)
 }
 
-func (ts *TenderService) RollbackTender(r *http.Request, tenderId string, version int32, username string) (models.Tender, error) {
+func (ts *TenderService) RollbackTender(r *http.Request, tenderID string, version int32, username string) (models.Tender, error) {
 	var emptyTender models.Tender
-	err := ts.storage.IsTenderExists(r.Context(), tenderId)
+	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.VersionNotFound}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.IsUserExists(r.Context(), username)
+	err = ts.storage.CheckUserExists(r.Context(), username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusUnauthorized, Msg: util.Unathorized}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderId, username)
+	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
 		return emptyTender, err
 	}
 
-	err = ts.storage.IsTenderVersionExists(r.Context(), tenderId, version)
+	err = ts.storage.CheckTenderVersionExists(r.Context(), tenderID, version)
 	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return emptyTender, util.MyErrorResponse{Status: http.StatusNotFound, Msg: util.VersionNotFound}
-		}
 		return emptyTender, err
 	}
 
-	return ts.storage.RollbackTender(r.Context(), tenderId, version, username)
+	return ts.storage.RollbackTender(r.Context(), tenderID, version, username)
 }

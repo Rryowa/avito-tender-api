@@ -30,7 +30,7 @@ func (d *Database) GetTenders(ctx context.Context, offset, limit int32, serviceT
 
 	const op2 = op + "pgxscan"
 	var tenders []models.Tender
-	if err := pgxscan.ScanAll(&tenders, rows); err != nil {
+	if err = pgxscan.ScanAll(&tenders, rows); err != nil {
 		return nil, fmt.Errorf("%s: %w", op2, err)
 	}
 
@@ -77,14 +77,14 @@ func (d *Database) GetUserTenders(ctx context.Context, offset, limit int32, user
 
 	const op2 = op + "pgxscan"
 	var tenders []models.Tender
-	if err := pgxscan.ScanAll(&tenders, rows); err != nil {
+	if err = pgxscan.ScanAll(&tenders, rows); err != nil {
 		return nil, fmt.Errorf("%s: %w", op2, err)
 	}
 
 	return tenders, err
 }
 
-func (d *Database) GetTenderStatus(ctx context.Context, tenderId, username string) (string, error) {
+func (d *Database) GetTenderStatus(ctx context.Context, tenderID, username string) (string, error) {
 	const op = "storage.GetTenderStatus"
 
 	query := `SELECT status
@@ -93,7 +93,7 @@ func (d *Database) GetTenderStatus(ctx context.Context, tenderId, username strin
   				AND creator_username = $2`
 
 	//TODO: test Created, Published, Closed
-	rows, err := d.Pool.Query(ctx, query, tenderId, username)
+	rows, err := d.Pool.Query(ctx, query, tenderID, username)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
@@ -101,14 +101,14 @@ func (d *Database) GetTenderStatus(ctx context.Context, tenderId, username strin
 
 	const op2 = op + "pgxscan"
 	var status string
-	if err := pgxscan.ScanOne(&status, rows); err != nil {
+	if err = pgxscan.ScanOne(&status, rows); err != nil {
 		return "", fmt.Errorf("%s: %w", op2, err)
 	}
 
 	return status, err
 }
 
-func (d *Database) UpdateTenderStatus(ctx context.Context, tenderId, status, username string) (models.Tender, error) {
+func (d *Database) UpdateTenderStatus(ctx context.Context, tenderID, status, username string) (models.Tender, error) {
 	const op = "storage.UpdateTenderStatus"
 
 	query := `UPDATE tender
@@ -117,7 +117,7 @@ func (d *Database) UpdateTenderStatus(ctx context.Context, tenderId, status, use
 				RETURNING id, name, description, service_type, status, version, organization_id, creator_username, created_at, updated_at;
 	`
 
-	rows, err := d.Pool.Query(ctx, query, status, tenderId, username)
+	rows, err := d.Pool.Query(ctx, query, status, tenderID, username)
 	if err != nil {
 		return models.Tender{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -132,7 +132,7 @@ func (d *Database) UpdateTenderStatus(ctx context.Context, tenderId, status, use
 	return updatedTender, nil
 }
 
-func (d *Database) EditTender(ctx context.Context, tender *models.Tender, tenderId, username string) (models.Tender, error) {
+func (d *Database) EditTender(ctx context.Context, tender *models.Tender, tenderID, username string) (models.Tender, error) {
 	const op = "storage.EditTender"
 
 	query := `UPDATE tender 
@@ -147,7 +147,7 @@ func (d *Database) EditTender(ctx context.Context, tender *models.Tender, tender
 				RETURNING id, name, description, service_type, status, version, organization_id, creator_username, created_at, updated_at;
 		`
 
-	rows, err := d.Pool.Query(ctx, query, tender.Name, tender.Description, tender.ServiceType, tenderId, username)
+	rows, err := d.Pool.Query(ctx, query, tender.Name, tender.Description, tender.ServiceType, tenderID, username)
 	if err != nil {
 		return models.Tender{}, fmt.Errorf("%s: %w", op, err)
 	}
@@ -162,12 +162,12 @@ func (d *Database) EditTender(ctx context.Context, tender *models.Tender, tender
 	return newTender, nil
 }
 
-func (d *Database) RollbackTender(ctx context.Context, tenderId string, version int32, username string) (models.Tender, error) {
+func (d *Database) RollbackTender(ctx context.Context, tenderID string, version int32, username string) (models.Tender, error) {
 	const op = "storage.RollbackTender"
 
 	query := `SELECT * FROM rollback_tender_version($1::UUID, $2::INT, $3::VARCHAR)`
 
-	rows, err := d.Pool.Query(ctx, query, tenderId, version, username)
+	rows, err := d.Pool.Query(ctx, query, tenderID, version, username)
 	if err != nil {
 		return models.Tender{}, fmt.Errorf("%s: %w", op, err)
 	}

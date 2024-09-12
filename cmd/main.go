@@ -15,7 +15,7 @@ import (
 func main() {
 	ctx := context.Background()
 	zapLogger := util.NewZapLogger()
-	storage := postgres.NewPostgresRepository(ctx, util.NewDbConfig(), zapLogger)
+	storage := postgres.NewPostgresRepository(ctx, util.NewDBConfig(), zapLogger)
 	tenderService := service.NewTenderService(storage)
 	bidService := service.NewBidService(storage)
 	ctrl := controller.NewController(zapLogger, tenderService, bidService)

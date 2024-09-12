@@ -1,26 +1,26 @@
 package util
 
 const (
-	Unathorized     = "Пользователь не существует или некорректен."
+	Unauthorized    = "Пользователь не существует или некорректен."
 	Forbidden       = "Недостаточно прав для выполнения действия."
 	NotFound        = "Тендер или предложение не найдено."
 	VersionNotFound = "Версия не найдена."
 )
 
-type MalformedRequest struct {
+type MalformedRequestError struct {
 	Status int
 	Msg    string
 }
 
-func (mr *MalformedRequest) Error() string {
+func (mr *MalformedRequestError) Error() string {
 	return mr.Msg
 }
 
-type MyErrorResponse struct {
+type MyResponseError struct {
 	Status int
 	Msg    string
 }
 
-func (er MyErrorResponse) Error() string {
+func (er MyResponseError) Error() string {
 	return er.Msg
 }

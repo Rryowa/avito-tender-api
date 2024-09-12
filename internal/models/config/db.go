@@ -2,7 +2,7 @@ package config
 
 import "time"
 
-type DbConfig struct {
+type DBConfig struct {
 	User     string        `env:"POSTGRES_USERNAME"`
 	Password string        `env:"POSTGRES_PASSWORD"`
 	Host     string        `env:"POSTGRES_HOST"`
