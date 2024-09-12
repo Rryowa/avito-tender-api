@@ -85,9 +85,29 @@ func (d *Database) CheckBidExists(ctx context.Context, bidID string) error {
 	return nil
 }
 
-// ValidateUsersPrivileges Проверяет принадлежность пользователя организации, которая открыла тендер.
-func (d *Database) ValidateUsersPrivileges(ctx context.Context, tenderID, requestedUser string) error {
-	const op = "storage.IsUserInOrganization"
+// CheckUserBidAuthor Проверяет, что пользователь является автором Предложения.
+func (d *Database) CheckUserBidAuthor(ctx context.Context, bidID, requestedUser string) error {
+	const op = "storage.CheckUserBidAuthor"
+
+	query := `SELECT 1
+				FROM bid
+				WHERE id = $1 AND author_username = $2;`
+
+	var dummy int
+	err := d.Pool.QueryRow(ctx, query, bidID, requestedUser).Scan(&dummy)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+// ValidateUserResponsible Проверяет принадлежность пользователя организации, которая открыла тендер.
+func (d *Database) ValidateUserResponsible(ctx context.Context, tenderID, username string) error {
+	const op = "storage.ValidateUserResponsible"
 
 	query := `SELECT 1
 				FROM organization_responsible o
@@ -96,7 +116,7 @@ func (d *Database) ValidateUsersPrivileges(ctx context.Context, tenderID, reques
 				WHERE t.id = $1 AND e.username = $2;`
 
 	var dummy int
-	err := d.Pool.QueryRow(ctx, query, tenderID, requestedUser).Scan(&dummy)
+	err := d.Pool.QueryRow(ctx, query, tenderID, username).Scan(&dummy)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}
@@ -107,7 +127,30 @@ func (d *Database) ValidateUsersPrivileges(ctx context.Context, tenderID, reques
 	return nil
 }
 
-func (d *Database) ValidateUsersPrivilegesUserID(ctx context.Context, id, tenderID string) error {
+// ValidateUserResponsibleBidID Проверяет принадлежность пользователя организации, которая открыла тендер.
+func (d *Database) ValidateUserResponsibleBidID(ctx context.Context, bidID, username string) error {
+	const op = "storage.ValidateUserResponsibleBidID"
+
+	query := `SELECT 1
+				FROM organization_responsible o
+				JOIN employee e ON o.user_id = e.id
+				JOIN bid b ON b.organization_id = o.organization_id
+				WHERE b.id = $1 AND e.username = $2;`
+
+	var dummy int
+	err := d.Pool.QueryRow(ctx, query, bidID, username).Scan(&dummy)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}
+		}
+		return fmt.Errorf("%s: %w", op, err)
+	}
+
+	return nil
+}
+
+// ValidateUserResponsibleUserID Проверяет принадлежность пользователя организации, которая открыла тендер.
+func (d *Database) ValidateUserResponsibleUserID(ctx context.Context, userID, tenderID string) error {
 	const op = "storage.ValidateUsersPrivilegesById"
 	query := `SELECT 1
 				FROM organization_responsible o
@@ -115,7 +158,7 @@ func (d *Database) ValidateUsersPrivilegesUserID(ctx context.Context, id, tender
 				WHERE o.user_id = $1 AND t.id = $2;`
 
 	var dummy int
-	err := d.Pool.QueryRow(ctx, query, id, tenderID).Scan(&dummy)
+	err := d.Pool.QueryRow(ctx, query, userID, tenderID).Scan(&dummy)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}
@@ -126,8 +169,9 @@ func (d *Database) ValidateUsersPrivilegesUserID(ctx context.Context, id, tender
 	return nil
 }
 
-func (d *Database) ValidateUsersPrivilegesOrgID(ctx context.Context, orgID, username string) error {
-	const op = "storage.ValidateUsersPrivilegesOrgID"
+// ValidateUserResponsibleOrgID Проверяет принадлежность пользователя организации, которая открыла тендер.
+func (d *Database) ValidateUserResponsibleOrgID(ctx context.Context, orgID, username string) error {
+	const op = "storage.ValidateUserResponsibleOrgID"
 	query := `SELECT 1
 				FROM organization_responsible o
 				JOIN employee e ON o.user_id = e.id
@@ -135,29 +179,6 @@ func (d *Database) ValidateUsersPrivilegesOrgID(ctx context.Context, orgID, user
 
 	var dummy int
 	err := d.Pool.QueryRow(ctx, query, orgID, username).Scan(&dummy)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}
-		}
-		return fmt.Errorf("%s: %w", op, err)
-	}
-
-	return nil
-}
-
-// TODO: add zap logging of errors
-func (d *Database) ValidateUsersPrivilegesBidID(ctx context.Context, bidID, username string) error {
-	const op = "storage.ValidateUsersPrivilegesBidID"
-
-	query := `
-		SELECT 1
-		FROM bid b
-		JOIN tender t ON b.tender_id = t.id
-		JOIN organization_responsible o ON t.organization_id = o.organization_id
-		WHERE b.id = $1 AND t.creator_username = $2;`
-
-	var exists int
-	err := d.Pool.QueryRow(ctx, query, bidID, username).Scan(&exists)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return util.MyResponseError{Status: http.StatusForbidden, Msg: util.Forbidden}

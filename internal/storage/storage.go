@@ -8,6 +8,7 @@ import (
 type Storage interface {
 	Tender
 	Bid
+	Checker
 	Validator
 }
 
@@ -24,7 +25,7 @@ type Tender interface {
 type Bid interface {
 	CreateBid(ctx context.Context, bid *models.Bid) (models.Bid, error)
 	GetUserBids(ctx context.Context, offset, limit int32, username string) ([]models.Bid, error)
-	GetBidsForTender(ctx context.Context, tenderID string, offset, limit int32) ([]models.Bid, error)
+	GetBidsForTender(ctx context.Context, tenderID string, offset, limit int32, status ...string) ([]models.Bid, error)
 	GetBidStatus(ctx context.Context, bidID, username string) (string, error)
 	UpdateBidStatus(ctx context.Context, bidID, status, username string) (models.Bid, error)
 	EditBid(ctx context.Context, bid *models.Bid, bidID, username string) (models.Bid, error)
@@ -34,15 +35,19 @@ type Bid interface {
 	RollbackBid(ctx context.Context, bidID string, version int32, username string) (models.Bid, error)
 }
 
-type Validator interface {
+type Checker interface {
 	CheckUserExists(ctx context.Context, username string) error
 	CheckUserByIDExists(ctx context.Context, id string) error
 	CheckTenderExists(ctx context.Context, tenderID string) error
 	CheckBidExists(ctx context.Context, bidID string) error
-	ValidateUsersPrivileges(ctx context.Context, tenderID, requestedUser string) error
-	ValidateUsersPrivilegesUserID(ctx context.Context, id, tenderID string) error
-	ValidateUsersPrivilegesOrgID(ctx context.Context, orgID, username string) error
-	ValidateUsersPrivilegesBidID(ctx context.Context, bidID, username string) error
+	CheckUserBidAuthor(ctx context.Context, bidID, requestedUser string) error
 	CheckBidVersionExists(ctx context.Context, bidID string, version int32) error
 	CheckTenderVersionExists(ctx context.Context, tenderID string, version int32) error
+}
+
+type Validator interface {
+	ValidateUserResponsible(ctx context.Context, tenderID, requestedUser string) error
+	ValidateUserResponsibleUserID(ctx context.Context, userID, tenderID string) error
+	ValidateUserResponsibleOrgID(ctx context.Context, orgID, username string) error
+	ValidateUserResponsibleBidID(ctx context.Context, bidID, username string) error
 }

@@ -83,9 +83,6 @@ func NewZapLogger() *zap.SugaredLogger {
 	)
 	logger := zap.New(core, zap.AddStacktrace(zap.ErrorLevel))
 	sugar := logger.Sugar()
-	if err := sugar.Sync(); err != nil {
-		return nil
-	}
 
 	return sugar
 }

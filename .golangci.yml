@@ -3,6 +3,7 @@ run:
   # Default: 1m
   timeout: 3m
 
+
 linters-settings:
   cyclop:
     # The maximal code complexity to report.

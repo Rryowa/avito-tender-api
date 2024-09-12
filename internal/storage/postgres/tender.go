@@ -92,7 +92,6 @@ func (d *Database) GetTenderStatus(ctx context.Context, tenderID, username strin
 				WHERE id = $1
   				AND creator_username = $2`
 
-	//TODO: test Created, Published, Closed
 	rows, err := d.Pool.Query(ctx, query, tenderID, username)
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)

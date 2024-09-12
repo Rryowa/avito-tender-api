@@ -20,13 +20,14 @@ func (ts *TenderService) CreateTender(r *http.Request, tender *models.Tender) (m
 		return emptyTender, err
 	}
 
-	if err := ts.storage.ValidateUsersPrivilegesOrgID(r.Context(), tender.OrganizationID.String(), tender.CreatorUsername); err != nil {
+	if err := ts.storage.ValidateUserResponsibleOrgID(r.Context(), tender.OrganizationID.String(), tender.CreatorUsername); err != nil {
 		return emptyTender, err
 	}
 
 	return ts.storage.CreateTender(r.Context(), tender)
 }
 
+// GetTenders Вывести PUBLISHED тендеры.
 func (ts *TenderService) GetTenders(r *http.Request, offset, limit int32, serviceTypes []string) ([]models.Tender, error) {
 	return ts.storage.GetTenders(r.Context(), offset, limit, serviceTypes)
 }
@@ -51,14 +52,10 @@ func (ts *TenderService) GetTenderStatus(r *http.Request, tenderID, username str
 		return "", err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
-	if err != nil {
-		return "", err
-	}
-
 	return ts.storage.GetTenderStatus(r.Context(), tenderID, username)
 }
 
+// UpdateTenderStatus Только Ответственный за тендер может изменить его.
 func (ts *TenderService) UpdateTenderStatus(r *http.Request, tenderID, status, username string) (models.Tender, error) {
 	var emptyTender models.Tender
 	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
@@ -71,7 +68,7 @@ func (ts *TenderService) UpdateTenderStatus(r *http.Request, tenderID, status, u
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
+	err = ts.storage.ValidateUserResponsible(r.Context(), tenderID, username)
 	if err != nil {
 		return emptyTender, err
 	}
@@ -79,6 +76,7 @@ func (ts *TenderService) UpdateTenderStatus(r *http.Request, tenderID, status, u
 	return ts.storage.UpdateTenderStatus(r.Context(), tenderID, status, username)
 }
 
+// EditTender Только Ответственный за тендер может изменить его.
 func (ts *TenderService) EditTender(r *http.Request, tender *models.Tender, tenderID, username string) (models.Tender, error) {
 	var emptyTender models.Tender
 	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
@@ -91,7 +89,7 @@ func (ts *TenderService) EditTender(r *http.Request, tender *models.Tender, tend
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
+	err = ts.storage.ValidateUserResponsible(r.Context(), tenderID, username)
 	if err != nil {
 		return emptyTender, err
 	}
@@ -99,6 +97,7 @@ func (ts *TenderService) EditTender(r *http.Request, tender *models.Tender, tend
 	return ts.storage.EditTender(r.Context(), tender, tenderID, username)
 }
 
+// RollbackTender Только Ответственный за тендер может совершить откат.
 func (ts *TenderService) RollbackTender(r *http.Request, tenderID string, version int32, username string) (models.Tender, error) {
 	var emptyTender models.Tender
 	err := ts.storage.CheckTenderExists(r.Context(), tenderID)
@@ -111,7 +110,7 @@ func (ts *TenderService) RollbackTender(r *http.Request, tenderID string, versio
 		return emptyTender, err
 	}
 
-	err = ts.storage.ValidateUsersPrivileges(r.Context(), tenderID, username)
+	err = ts.storage.ValidateUserResponsible(r.Context(), tenderID, username)
 	if err != nil {
 		return emptyTender, err
 	}

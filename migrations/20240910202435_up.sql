@@ -173,10 +173,6 @@ BEGIN
     FROM tender_history
     WHERE tender_history.tender_id = tenderId AND tender_history.version = rollback_version;
 
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Version % for tender % not found', rollback_version, tenderId;
-    END IF;
-
     UPDATE tender
     SET
         name = tender_record.name,
@@ -211,6 +207,8 @@ CREATE TRIGGER bid_metadata_trigger
     FOR EACH ROW
 EXECUTE FUNCTION update_bid_metadata();
 
+
+
 CREATE OR REPLACE FUNCTION save_bid_to_history()
     RETURNS TRIGGER AS $$
 BEGIN
@@ -233,10 +231,6 @@ BEGIN
     SELECT * INTO bid_record
     FROM bid_history
     WHERE bid_history.bid_id = bidId AND bid_history.version = rollback_version;
-
-    IF NOT FOUND THEN
-        RAISE EXCEPTION 'Version % for bid % not found', rollback_version, bidId;
-    END IF;
 
     UPDATE bid
     SET
@@ -276,6 +270,23 @@ CREATE TRIGGER set_author_username_trigger
     BEFORE INSERT ON bid
     FOR EACH ROW
 EXECUTE FUNCTION set_author_username();
+
+
+CREATE OR REPLACE FUNCTION set_organization_id()
+    RETURNS TRIGGER AS $$
+BEGIN
+    SELECT organization_id INTO NEW.organization_id
+    FROM tender
+    WHERE id = NEW.tender_id;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER set_organization_id_trigger
+    BEFORE INSERT ON bid
+    FOR EACH ROW
+EXECUTE FUNCTION set_organization_id();
 
 
 -- Prepare data

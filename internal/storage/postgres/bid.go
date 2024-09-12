@@ -55,18 +55,28 @@ func (d *Database) GetUserBids(ctx context.Context, offset, limit int32, usernam
 	return bids, err
 }
 
-func (d *Database) GetBidsForTender(ctx context.Context, tenderID string, offset, limit int32) ([]models.Bid, error) {
+func (d *Database) GetBidsForTender(ctx context.Context, tenderID string, offset, limit int32, status ...string) ([]models.Bid, error) {
 	const op = "storage.GetBidsForTender"
 
 	query := `SELECT b.id, b.name, b.description, b.tender_id, b.status, b.decision, b.author_type, b.author_id, b.version, b.created_at, b.updated_at
 				FROM bid b
 				JOIN employee e ON (b.author_id = e.id)
-				WHERE b.tender_id = $1
+				WHERE b.tender_id = $1 AND (NULLIF($2, '') IS NULL OR b.status = $2::bid_status)
 				ORDER BY b.name
-				OFFSET $2
-				FETCH NEXT $3 ROWS ONLY;`
+				OFFSET $3
+				FETCH NEXT $4 ROWS ONLY;`
 
-	rows, err := d.Pool.Query(ctx, query, tenderID, offset, limit)
+	var singleStatus string
+	switch len(status) {
+	case 0:
+		singleStatus = ""
+	case 1:
+		singleStatus = status[0]
+	default:
+		return nil, fmt.Errorf("%s: %s", op, "too much statuses")
+	}
+
+	rows, err := d.Pool.Query(ctx, query, tenderID, singleStatus, offset, limit)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
@@ -96,12 +106,12 @@ func (d *Database) GetBidStatus(ctx context.Context, bidID, username string) (st
 	defer rows.Close()
 
 	const op2 = op + "pgxscan"
-	var status string
-	if err = pgxscan.ScanOne(&status, rows); err != nil {
+	var newStatus string
+	if err = pgxscan.ScanOne(&newStatus, rows); err != nil {
 		return "", fmt.Errorf("%s: %w", op2, err)
 	}
 
-	return status, err
+	return newStatus, err
 }
 
 func (d *Database) UpdateBidStatus(ctx context.Context, bidID, status, username string) (models.Bid, error) {

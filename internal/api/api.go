@@ -82,8 +82,8 @@ func (a *API) Run(ctxBackground context.Context) {
 	g.Use(middleware.OapiRequestValidator(swagger))
 	// the generated code sets up the routing to match the OpenAPI spec and
 	// delegates request handling to generated controller.gen.go methods.
-	// The generated ServerInterfaceWrapper wraps controller.go methods and
-	// calls controller.go methods when the corresponding route is accessed.
+	// The generated ServerInterfaceWrapper wraps tender.go methods and
+	// calls tender.go methods when the corresponding route is accessed.
 	controller.RegisterHandlersWithBaseURL(a.server, a.controller, "/api")
 
 	a.ListenGracefulShutdown(ctx)
