@@ -22,7 +22,7 @@ DROP FUNCTION IF EXISTS rollback_tender_version(tender_id UUID, rollback_version
 
 DROP TYPE IF EXISTS service_type;
 DROP TYPE IF EXISTS tender_status;
-DROP TYPE IF EXISTS organization_type;
+-- DROP TYPE IF EXISTS organization_type;
 
 DROP TRIGGER IF EXISTS set_author_username_trigger ON bid;
 DROP FUNCTION IF EXISTS set_author_username();
@@ -41,5 +41,5 @@ DROP TYPE IF EXISTS bid_decision;
 DROP TYPE IF EXISTS author_type_enum;
 DROP TYPE IF EXISTS bid_status;
 
-DROP EXTENSION IF EXISTS "uuid-ossp";
+-- DROP EXTENSION IF EXISTS "uuid-ossp";
 -- +goose StatementEnd

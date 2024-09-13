@@ -16,7 +16,7 @@ type Database struct {
 }
 
 func NewPostgresRepository(ctx context.Context, cfg *config.DBConfig, zap *zap.SugaredLogger) storage.Storage {
-	connStr := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
+	connStr := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=require", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.DBName)
 	var pool *pgxpool.Pool
 	var err error
 

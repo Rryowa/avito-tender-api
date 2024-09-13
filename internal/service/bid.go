@@ -43,8 +43,7 @@ func (bs *BidService) GetUserBids(r *http.Request, offset, limit int32, username
 	return bs.storage.GetUserBids(r.Context(), offset, limit, username)
 }
 
-// GetBidsForTender Увидеть статус CREATED/CLOSED
-// может только Ответственный.
+// GetBidsForTender Увидеть может только Ответственный.
 func (bs *BidService) GetBidsForTender(r *http.Request, tenderID string, offset, limit int32, username string) ([]models.Bid, error) {
 	err := bs.storage.CheckTenderExists(r.Context(), tenderID)
 	if err != nil {
@@ -56,10 +55,9 @@ func (bs *BidService) GetBidsForTender(r *http.Request, tenderID string, offset,
 		return nil, err
 	}
 
-	errResponsible := bs.storage.ValidateUserResponsible(r.Context(), tenderID, username)
-	if errResponsible != nil {
-		// Если не ответственный - то вывести только PUBLISHED.
-		return bs.storage.GetBidsForTender(r.Context(), tenderID, offset, limit, string(models.Published))
+	err = bs.storage.ValidateUserResponsible(r.Context(), tenderID, username)
+	if err != nil {
+		return nil, err
 	}
 
 	return bs.storage.GetBidsForTender(r.Context(), tenderID, offset, limit)

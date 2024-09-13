@@ -23,7 +23,6 @@ type API struct {
 	server          *echo.Echo
 	controller      *controller.Controller
 	zapLogger       *zap.SugaredLogger
-	telemetryAddr   string
 	gracefulTimeout time.Duration
 }
 
@@ -40,7 +39,6 @@ func NewAPI(c *controller.Controller, l *zap.SugaredLogger, sc *config.ServerCon
 		controller:      c,
 		zapLogger:       l,
 		gracefulTimeout: sc.GracefulTimeout,
-		telemetryAddr:   sc.TelemetryAddr,
 	}
 }
 

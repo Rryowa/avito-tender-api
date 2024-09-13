@@ -38,7 +38,6 @@ func NewServerConfig() *config.ServerConfig {
 
 	return &config.ServerConfig{
 		ServerAddr:      os.Getenv("SERVER_ADDRESS"),
-		TelemetryAddr:   os.Getenv("TELEMETRY_ADDRESS"),
 		WriteTimeout:    writeTimeout,
 		ReadTimeout:     readTimeout,
 		IdleTimeout:     idleTimeout,

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cnrprod1725729288-team-77382-service
+  labels:
+    app.kubernetes.io/name: cnrprod1725729288-team-77382
+    app.kubernetes.io/component: web
+spec:
+  type: LoadBalancer
+  selector:
+    app.kubernetes.io/name: cnrprod1725729288-team-77382
+    app.kubernetes.io/component: web
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8080

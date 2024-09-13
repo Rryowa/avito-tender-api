@@ -2,12 +2,11 @@
 -- +goose StatementBegin
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Tender Tables
-CREATE TYPE organization_type AS ENUM (
-    'IE',
-    'LLC',
-    'JSC'
-);
+-- CREATE TYPE organization_type AS ENUM (
+--     'IE',
+--     'LLC',
+--     'JSC'
+-- );
 CREATE TYPE tender_status AS ENUM (
     'Created',
     'Published',
@@ -168,10 +167,16 @@ CREATE OR REPLACE FUNCTION rollback_tender_version(tenderId UUID, rollback_versi
     RETURNS TABLE (id UUID, name VARCHAR, description TEXT, service_type service_type, status tender_status, version INT, organization_id UUID, creator_username VARCHAR, created_at TIMESTAMP, updated_at TIMESTAMP) AS $$
 DECLARE
     tender_record tender_history%ROWTYPE;
+    current_version INT;
 BEGIN
     SELECT * INTO tender_record
     FROM tender_history
-    WHERE tender_history.tender_id = tenderId AND tender_history.version = rollback_version;
+    WHERE tender_history.tender_id = tenderId
+      AND tender_history.version = rollback_version;
+
+    SELECT t.version INTO current_version
+    FROM tender t
+    WHERE t.id = tenderId;
 
     UPDATE tender
     SET
@@ -180,10 +185,11 @@ BEGIN
         service_type = tender_record.service_type,
         status = tender_record.status,
         organization_id = tender_record.organization_id,
-        creator_username = username,
-        updated_at = CURRENT_TIMESTAMP,
-        version = tender_record.version + 1
+        creator_username = username
+--         updated_at = CURRENT_TIMESTAMP,
+--         version = current_version + 1
     WHERE tender.id = tenderId;
+
     RETURN QUERY
         SELECT tender.id, tender.name, tender.description, tender.service_type, tender.status, tender.version, tender.organization_id, tender.creator_username, tender.created_at, tender.updated_at
         FROM tender

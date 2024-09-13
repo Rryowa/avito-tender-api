@@ -21,6 +21,11 @@ func (c *Controller) GetTenders(ctx echo.Context, params GetTendersParams) error
 	var serviceTypes []string
 	if params.ServiceType != nil {
 		for _, st := range *params.ServiceType {
+			if _, ok := models.ServiceTypeMap[models.ServiceType(st)]; !ok {
+				err := errors.New("wrong service type")
+				ctx.JSON(http.StatusBadRequest, ErrorResponse{Reason: err.Error()})
+				return err
+			}
 			serviceTypes = append(serviceTypes, string(st))
 		}
 	}

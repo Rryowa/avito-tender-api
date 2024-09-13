@@ -1,8 +1,0 @@
-Подключение к БД
-    host=rc1b-5xmqy6bq501kls4m.mdb.yandexcloud.net
-    port=6432
-    dbname=cnrprod1725729288-team-77382
-    user=cnrprod1725729288-team-77382
-    password=cnrprod1725729288-team-77382
-    target_session_attrs=read-write
-
